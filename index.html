@@ -80,42 +80,37 @@ footer.note{margin-top:50px; padding:20px 32px; border-top:1px solid var(--paper
 </style>
 </head>
 <body>
-
 <div class="topbar">
-  <div class="brand-seal">H</div>
-  <div class="brand-text">
-    <div class="t1 display">Histoire · Géographie · EMC</div>
-    <div class="t2 mono">Collège — 6e · 5e · 3e</div>
-  </div>
+<div class="brand-seal">H</div>
+<div class="brand-text">
+<div class="t1 display">Histoire · Géographie · EMC</div>
+<div class="t2 mono">Collège — 6e · 5e · 3e</div>
+</div>
 </div>
 <div class="breadcrumb" id="breadcrumb"></div>
 <main id="main-content">
-  <div class="loader-screen" id="loader">
-    <div class="loader-spin"></div>
-    <p style="color:var(--ink-soft);">Chargement du contenu depuis Google Sheets...</p>
-  </div>
+<div class="loader-screen" id="loader">
+<div class="loader-spin"></div>
+<p style="color:var(--ink-soft);">Chargement du contenu depuis Google Sheets...</p>
+</div>
 </main>
 <footer class="note">Contenu géré depuis un Google Sheet — modifiable à tout moment sans retoucher ce fichier.</footer>
-
 <div class="overlay" id="overlay" onclick="if(event.target===this) closeModal()">
-  <div class="modal">
-    <div class="modal-head"><h2 class="display" id="modal-title"></h2><button class="modal-close" onclick="closeModal()">✕</button></div>
-    <div class="modal-body" id="modal-body"></div>
-  </div>
+<div class="modal">
+<div class="modal-head"><h2 class="display" id="modal-title"></h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+<div class="modal-body" id="modal-body"></div>
 </div>
-
+</div>
 <script>
 const SHEET_ID = "1U-2XhJB_DXRiCcNAP8qW9DQnYJr4rc2xGyVqkCVXWeA";
-const SHEET_ID_2 = "1351nV_TJj76poLgKM8N9Ixbma8jB8Y2Py_1DOMx8wZg";
+const SHEET_ID_2 = "1BsSKv3dzaF79ppVE3WQKeXOXNBVseEtWmVEJyg8gUCE";
 const RESOURCE_BUTTONS = ["Cours / Leçon", "Fiche de révision", "Vocabulaire", "Ce que je dois savoir", "Documents", "Vidéos", "Activités", "Évaluation", "Correction des activités", "Pour aller plus loin"];
 const CONTENT_MAP = {"Cours / Leçon": "Lecon", "Fiche de révision": "FicheDeRevision", "Vocabulaire": "Vocabulaire", "Ce que je dois savoir": "CeQueJeDoisSavoir", "Documents": "Documents", "Vidéos": "Videos", "Activités": "Activites", "Évaluation": "Evaluation", "Correction des activités": "Correction", "Pour aller plus loin": "PourAllerPlusLoin"};
 const LEVEL_META = {"6e": {"label": "6ème", "accent": "#8B2625", "desc": "La Préhistoire, l'Orient ancien, la Grèce et Rome, les débuts du judaïsme et du christianisme."}, "5e": {"label": "5ème", "accent": "#C1622B", "desc": "Le Moyen Âge, le monde islamique, la Méditerranée médiévale et la Renaissance."}, "3e": {"label": "3ème", "accent": "#2B5D5C", "desc": "Les guerres mondiales, la guerre froide, la construction européenne et le monde actuel."}};
 const MATIERE_ORDER = ["Histoire", "Géographie", "EMC", "Méthodo", "Sites utiles", "Brevet"];
-
 let ROWS = [];
 let currentChapterRow = null;
 let state = {niveau:null, matiere:null};
-
 async function fetchSheetRows(sheetId){
   const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
   const res = await fetch(url);
@@ -131,7 +126,6 @@ async function fetchSheetRows(sheetId){
     return obj;
   });
 }
-
 function mergeRows(baseRows, updateRows){
   const key = r => `${r.Niveau}|${r.Matiere}|${r.Chapitre}`;
   const byKey = {};
@@ -139,7 +133,6 @@ function mergeRows(baseRows, updateRows){
   updateRows.forEach(r => {
     const k = key(r);
     if(byKey[k]){
-      // fusionner : les valeurs non vides du deuxieme tableau remplacent celles du premier
       Object.keys(r).forEach(field => {
         if(r[field] !== '' && r[field] !== undefined) byKey[k][field] = r[field];
       });
@@ -149,19 +142,17 @@ function mergeRows(baseRows, updateRows){
   });
   return Object.values(byKey);
 }
-
 async function loadData(){
   const baseRows = await fetchSheetRows(SHEET_ID);
   let updateRows = [];
   try {
     updateRows = await fetchSheetRows(SHEET_ID_2);
   } catch(e) {
-    console.warn('Tableau de mise à jour (contenu 6e/5e) inaccessible.', e);
+    console.warn('Tableau de mise à jour (contenu 6e/5e/3e) inaccessible.', e);
     window.__sheet2Failed = true;
   }
   ROWS = mergeRows(baseRows, updateRows);
 }
-
 function showError(){
   document.getElementById('main-content').innerHTML = `
     <div class="loader-screen">
@@ -177,9 +168,7 @@ function showError(){
       </div>
     </div>`;
 }
-
 function jsAttr(v){ return JSON.stringify(v).replace(/'/g, "\\u0027"); }
-
 function setBreadcrumb(items){
   document.getElementById('breadcrumb').innerHTML = items.map((it,i)=>{
     const last = i===items.length-1;
@@ -187,7 +176,6 @@ function setBreadcrumb(items){
   }).join('');
 }
 function showView(html){ document.getElementById('main-content').innerHTML = html; window.scrollTo({top:0,behavior:'smooth'}); }
-
 function getLevels(){ return [...new Set(ROWS.map(r=>r.Niveau))].filter(Boolean); }
 function getMatieres(niveau){
   const set = [...new Set(ROWS.filter(r=>r.Niveau===niveau).map(r=>r.Matiere))];
@@ -205,7 +193,6 @@ function getThemes(niveau, matiere){
     chapters: rows.filter(r=>r.Theme===t).sort((a,b)=>(a.Ordre||0)-(b.Ordre||0))
   }));
 }
-
 function goHome(){
   const levels = getLevels();
   const cards = levels.map(key=>{
@@ -231,7 +218,6 @@ function goHome(){
     </div>`);
   setBreadcrumb([{label:'Accueil', action:'goHome()'}]);
 }
-
 function goNiveau(key){
   state.niveau = key;
   const meta = LEVEL_META[key] || {label:key, accent:'#8B2625'};
@@ -244,7 +230,6 @@ function goNiveau(key){
     <div class="matiere-tabs">${tabs}</div>`);
   setBreadcrumb([{label:'Accueil',action:'goHome()'},{label:meta.label,action:`goNiveau('${key}')`}]);
 }
-
 function goMatiere(niveauKey, matiere){
   if(matiere==='EMC'){ goEMC(); return; }
   if(matiere==='Méthodo'){ goMethodo(); return; }
@@ -264,15 +249,19 @@ function goMatiere(niveauKey, matiere){
     ${blocks}`);
   setBreadcrumb([{label:'Accueil',action:'goHome()'},{label:meta.label,action:`goNiveau(${jsAttr(niveauKey)})`},{label:matiere,action:`goMatiere(${jsAttr(niveauKey)},${jsAttr(matiere)})`}]);
 }
-
+function isLocked(btnLabel){
+  return currentChapterRow && currentChapterRow.Verrouille && currentChapterRow.Verrouille.split(',').map(s=>s.trim().toLowerCase()).includes(btnLabel.toLowerCase());
+}
 function goChapitre(niveauKey, matiere, chapTitre){
   const meta = LEVEL_META[niveauKey] || {label:niveauKey};
   const row = ROWS.find(r=>r.Niveau===niveauKey && r.Matiere===matiere && r.Chapitre===chapTitre);
   currentChapterRow = row;
+  const lockedList = (row && row.Verrouille) ? row.Verrouille.split(',').map(s=>s.trim().toLowerCase()) : [];
   const buttons = RESOURCE_BUTTONS.map(btn=>{
     const key = CONTENT_MAP[btn];
     const hasContent = row && key && row[key];
-    return `<button class="resource-btn ${hasContent?'has-content':''}" onclick='openResource(${jsAttr(btn)})'>${btn}</button>`;
+    const locked = lockedList.includes(btn.toLowerCase());
+    return `<button class="resource-btn ${hasContent?'has-content':''}" onclick='openResource(${jsAttr(btn)})'>${locked?'🔒 ':''}${btn}</button>`;
   }).join('');
   showView(`
     <div class="eyebrow">${matiere}</div>
@@ -280,12 +269,13 @@ function goChapitre(niveauKey, matiere, chapTitre){
     <div class="resource-grid">${buttons}</div>`);
   setBreadcrumb([{label:'Accueil',action:'goHome()'},{label:meta.label,action:`goNiveau(${jsAttr(niveauKey)})`},{label:matiere,action:`goMatiere(${jsAttr(niveauKey)},${jsAttr(matiere)})`},{label:chapTitre,action:''}]);
 }
-
 function openResource(btnLabel){
   document.getElementById('modal-title').textContent = btnLabel;
   const key = CONTENT_MAP[btnLabel];
   const body = document.getElementById('modal-body');
-  if(currentChapterRow && key && currentChapterRow[key]){
+  if(isLocked(btnLabel)){
+    body.innerHTML = '<div class="modal-placeholder">🔒 Ce contenu n\'est pas encore disponible. Demande à ton professeur si tu penses qu\'il devrait l\'être.</div>';
+  } else if(currentChapterRow && key && currentChapterRow[key]){
     body.innerHTML = currentChapterRow[key];
   } else {
     body.innerHTML = '<div class="modal-placeholder">Contenu à ajouter — remplis la colonne correspondante dans le Google Sheet.</div>';
@@ -293,7 +283,6 @@ function openResource(btnLabel){
   document.getElementById('overlay').classList.add('active');
 }
 function closeModal(){ document.getElementById('overlay').classList.remove('active'); }
-
 function goEMC(){
   setBreadcrumb([{label:'Accueil',action:'goHome()'},{label:'EMC',action:'goEMC()'}]);
   showView(`
@@ -318,7 +307,6 @@ function goMethodo(){
       <div class="chapitre-row"><span class="chapitre-num mono">M4</span><span class="titre">Réaliser une carte mentale de révision</span></div>
     </div>`);
 }
-
 loadData().then(goHome).catch(showError);
 </script>
 </body>
