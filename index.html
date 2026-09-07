@@ -132,7 +132,7 @@ const RESOURCE_BUTTONS = ["Cours / Leçon", "Fiche de révision", "Vocabulaire",
 const CONTENT_MAP = {"Cours / Leçon": "Lecon", "Fiche de révision": "FicheDeRevision", "Vocabulaire": "Vocabulaire", "Ce que je dois savoir": "CeQueJeDoisSavoir", "Documents": "Documents", "Vidéos": "Videos", "Activités": "Activites", "Évaluation": "Evaluation", "Correction des activités": "Correction", "Correction progressive": "CorrectionProgressive", "Pour aller plus loin": "PourAllerPlusLoin"};
 const LEVEL_META = {"6e": {"label": "6ème", "accent": "#8B2625", "desc": "La Préhistoire, l'Orient ancien, la Grèce et Rome, les débuts du judaïsme et du christianisme."}, "5e": {"label": "5ème", "accent": "#C1622B", "desc": "Le Moyen Âge, le monde islamique, la Méditerranée médiévale et la Renaissance."}, "3e": {"label": "3ème", "accent": "#2B5D5C", "desc": "Les guerres mondiales, la guerre froide, la construction européenne et le monde actuel."}};
 const MATIERE_ORDER = ["Histoire", "Géographie", "EMC", "Méthodo", "Sites utiles", "Brevet"];
-const SHEET_ID_DOCS = "";
+const ONGLET_DOCS = "Documents";
 const MANUEL_NUMERIQUE = {
   "6e": "https://www.editions-hatier.fr/flip/flex/97824010201461?token=1347410d07bdfb196988c181c2873db6",
   "5e": "https://www.editions-hatier.fr/flip/flex/97824010201539",
@@ -142,14 +142,17 @@ let ROWS = [];
 let DOCS = [];
 let currentChapterRow = null;
 let state = {niveau:null, matiere:null};
-async function fetchSheetRows(sheetId){
-  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
+async function fetchSheetRows(sheetId, onglet){
+  let url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`;
+  if(onglet) url += `&sheet=${encodeURIComponent(onglet)}`;
   const res = await fetch(url);
   if(!res.ok) throw new Error('fetch_failed');
   const text = await res.text();
   const start = text.indexOf('(');
   const end = text.lastIndexOf(')');
+  if(start === -1 || end === -1) throw new Error('reponse_illisible');
   const json = JSON.parse(text.substring(start+1, end));
+  if(!json.table || !json.table.cols) throw new Error('onglet_absent');
   const cols = json.table.cols.map(c => c.label);
   return json.table.rows.map(r => {
     const obj = {};
@@ -183,13 +186,11 @@ async function loadData(){
     window.__sheet2Failed = true;
   }
   ROWS = mergeRows(baseRows, updateRows);
-  if(SHEET_ID_DOCS){
-    try {
-      DOCS = await fetchSheetRows(SHEET_ID_DOCS);
-    } catch(e) {
-      console.warn('Tableau des documents inaccessible.', e);
-      window.__docsFailed = true;
-    }
+  try {
+    DOCS = await fetchSheetRows(SHEET_ID_2, ONGLET_DOCS);
+  } catch(e) {
+    console.warn(`Onglet "${ONGLET_DOCS}" absent ou illisible.`, e);
+    window.__docsAbsent = true;
   }
 }
 function showError(){
@@ -305,8 +306,8 @@ function goDocuments(niveauKey){
   const num = v => { const n = parseFloat(v); return isNaN(n) ? 999 : n; };
   let corps;
   if(rows.length === 0){
-    corps = window.__docsFailed
-      ? `<div class="docs-empty">Les documents n'ont pas pu \u00eatre charg\u00e9s pour le moment. Reviens un peu plus tard.</div>`
+    corps = window.__docsAbsent
+      ? `<div class="docs-empty">Les documents ne sont pas disponibles pour le moment. Reviens un peu plus tard.</div>`
       : `<div class="docs-empty">Aucun document n'est encore publi\u00e9 pour ce niveau.</div>`;
   } else {
     corps = dossiers.map((nom, i) => {
