@@ -54,6 +54,23 @@ p.page-sub{color:var(--ink-soft); margin:0 0 26px; max-width:640px; font-size:15
 .manuel-btn p{margin:0; font-size:12.5px; color:var(--ink-soft);}
 .manuel-btn .manuel-fleche{margin-left:auto; flex:none; font-weight:600; font-size:13px; color:var(--manuel-accent,var(--rust));}
 @media (max-width:520px){.manuel-btn .manuel-fleche{display:none;}}
+.niveau-ressources{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+@media (max-width:700px){.niveau-ressources{grid-template-columns:1fr;}}
+.docs-dossier{background:#fff; border:1px solid var(--paper-line); border-radius:10px; margin-bottom:10px; overflow:hidden; box-shadow:0 2px 8px rgba(43,36,27,.05);}
+.docs-dossier > summary{list-style:none; cursor:pointer; display:flex; align-items:center; gap:12px; padding:14px 18px; font-weight:600; font-size:15px;}
+.docs-dossier > summary::-webkit-details-marker{display:none;}
+.docs-chevron{flex:none; width:22px; height:22px; border-radius:6px; background:var(--dossier-accent,var(--bordeaux)); color:#fff; display:flex; align-items:center; justify-content:center; font-size:11px; transition:transform .18s;}
+.docs-dossier[open] .docs-chevron{transform:rotate(90deg);}
+.docs-compte{margin-left:auto; flex:none; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ink-soft); background:var(--parchment-deep); padding:3px 9px; border-radius:999px;}
+.docs-liste{padding:0 18px 14px 52px;}
+.doc-item{display:flex; align-items:baseline; gap:12px; padding:11px 0; border-top:1px solid var(--paper-line); text-decoration:none; color:var(--ink);}
+.doc-item .doc-titre{font-weight:600; font-size:14.5px;}
+.doc-item .doc-desc{display:block; font-weight:400; font-size:12.5px; color:var(--ink-soft); margin-top:2px;}
+a.doc-item:hover .doc-titre{color:var(--dossier-accent,var(--bordeaux)); text-decoration:underline;}
+.doc-ouvrir{margin-left:auto; flex:none; font-size:12px; font-weight:600; color:var(--dossier-accent,var(--bordeaux));}
+.doc-item.doc-vide{color:var(--ink-soft); font-style:italic;}
+.doc-item.doc-vide .doc-ouvrir{color:var(--ink-soft); font-style:normal;}
+.docs-empty{background:rgba(255,255,255,.55); border:1px dashed var(--gold); border-radius:var(--radius); padding:22px 24px; font-size:14px; color:var(--ink-soft);}
 .theme-block{margin-bottom:22px;}
 .theme-title{font-weight:700; font-size:14.5px; color:var(--ink); background:#fff; border:1px solid var(--paper-line); border-radius:10px; padding:14px 18px; margin-bottom:8px;}
 .chapitres-list{display:flex; flex-direction:column; gap:8px;}
@@ -115,12 +132,14 @@ const RESOURCE_BUTTONS = ["Cours / Leçon", "Fiche de révision", "Vocabulaire",
 const CONTENT_MAP = {"Cours / Leçon": "Lecon", "Fiche de révision": "FicheDeRevision", "Vocabulaire": "Vocabulaire", "Ce que je dois savoir": "CeQueJeDoisSavoir", "Documents": "Documents", "Vidéos": "Videos", "Activités": "Activites", "Évaluation": "Evaluation", "Correction des activités": "Correction", "Correction progressive": "CorrectionProgressive", "Pour aller plus loin": "PourAllerPlusLoin"};
 const LEVEL_META = {"6e": {"label": "6ème", "accent": "#8B2625", "desc": "La Préhistoire, l'Orient ancien, la Grèce et Rome, les débuts du judaïsme et du christianisme."}, "5e": {"label": "5ème", "accent": "#C1622B", "desc": "Le Moyen Âge, le monde islamique, la Méditerranée médiévale et la Renaissance."}, "3e": {"label": "3ème", "accent": "#2B5D5C", "desc": "Les guerres mondiales, la guerre froide, la construction européenne et le monde actuel."}};
 const MATIERE_ORDER = ["Histoire", "Géographie", "EMC", "Méthodo", "Sites utiles", "Brevet"];
+const SHEET_ID_DOCS = "";
 const MANUEL_NUMERIQUE = {
   "6e": "https://www.editions-hatier.fr/flip/flex/97824010201461?token=1347410d07bdfb196988c181c2873db6",
   "5e": "https://www.editions-hatier.fr/flip/flex/97824010201539",
   "3e": "https://www.editions-hatier.fr/flip/flex/97824010774541?token=1347410d07bdfb196988c181c2873db6"
 };
 let ROWS = [];
+let DOCS = [];
 let currentChapterRow = null;
 let state = {niveau:null, matiere:null};
 async function fetchSheetRows(sheetId){
@@ -164,6 +183,14 @@ async function loadData(){
     window.__sheet2Failed = true;
   }
   ROWS = mergeRows(baseRows, updateRows);
+  if(SHEET_ID_DOCS){
+    try {
+      DOCS = await fetchSheetRows(SHEET_ID_DOCS);
+    } catch(e) {
+      console.warn('Tableau des documents inaccessible.', e);
+      window.__docsFailed = true;
+    }
+  }
 }
 function showError(){
   document.getElementById('main-content').innerHTML = `
@@ -237,22 +264,73 @@ function goNiveau(key){
   const tabs = matieres.map(m=>`<button class="matiere-tab" style="--tab-accent:${meta.accent}" onclick='goMatiere(${jsAttr(key)},${jsAttr(m)})'>${m}</button>`).join('');
   const manuelUrl = MANUEL_NUMERIQUE[key];
   const manuel = manuelUrl ? `
-    <div class="eyebrow">Ressource du niveau</div>
     <a class="manuel-btn" style="--manuel-accent:${meta.accent}" href="${manuelUrl}" target="_blank" rel="noopener noreferrer">
       <span class="manuel-icone">📖</span>
       <span>
         <h3 class="display">Mon manuel numérique</h3>
         <p>Ouvre le manuel dans un nouvel onglet.</p>
       </span>
-      <span class="manuel-fleche">Ouvrir →</span>
     </a>` : '';
+  const nbDocs = getDocs(key).length;
+  const docsBtn = `
+    <button class="manuel-btn" style="--manuel-accent:${meta.accent}" onclick='goDocuments(${jsAttr(key)})'>
+      <span class="manuel-icone">📁</span>
+      <span>
+        <h3 class="display">Documents</h3>
+        <p>${nbDocs > 0 ? (nbDocs + ' document' + (nbDocs > 1 ? 's' : '') + ' à télécharger ou consulter.') : 'Fiches et documents du niveau.'}</p>
+      </span>
+    </button>`;
   showView(`
     <div class="eyebrow">Niveau</div>
     <h1 class="page-title display">${meta.label}</h1>
     <p class="page-sub">Choisis une matière pour accéder à la liste des chapitres.</p>
     <div class="matiere-tabs">${tabs}</div>
-    ${manuel}`);
+    <div class="eyebrow">Ressources du niveau</div>
+    <div class="niveau-ressources">${manuel}${docsBtn}</div>`);
   setBreadcrumb([{label:'Accueil',action:'goHome()'},{label:meta.label,action:`goNiveau('${key}')`}]);
+}
+function getDocs(niveauKey){
+  return DOCS.filter(d => String(d.Niveau || '').trim() === niveauKey);
+}
+function goDocuments(niveauKey){
+  const meta = LEVEL_META[niveauKey] || {label:niveauKey, accent:'#8B2625'};
+  const rows = getDocs(niveauKey);
+  const dossiers = [];
+  const seen = {};
+  rows.forEach(d => {
+    const nom = String(d.Dossier || '').trim() || 'Documents';
+    if(!seen[nom]){ seen[nom] = []; dossiers.push(nom); }
+    seen[nom].push(d);
+  });
+  const num = v => { const n = parseFloat(v); return isNaN(n) ? 999 : n; };
+  let corps;
+  if(rows.length === 0){
+    corps = window.__docsFailed
+      ? `<div class="docs-empty">Les documents n'ont pas pu \u00eatre charg\u00e9s pour le moment. Reviens un peu plus tard.</div>`
+      : `<div class="docs-empty">Aucun document n'est encore publi\u00e9 pour ce niveau.</div>`;
+  } else {
+    corps = dossiers.map((nom, i) => {
+      const items = seen[nom].slice().sort((a,b) => num(a.Ordre) - num(b.Ordre)).map(d => {
+        const titre = String(d.Titre || '').trim() || 'Document';
+        const desc = String(d.Description || '').trim();
+        const lien = String(d.Lien || '').trim();
+        const bloc = `<span><span class="doc-titre">${titre}</span>${desc ? `<span class="doc-desc">${desc}</span>` : ''}</span>`;
+        return lien
+          ? `<a class="doc-item" href="${lien}" target="_blank" rel="noopener noreferrer">${bloc}<span class="doc-ouvrir">Ouvrir</span></a>`
+          : `<div class="doc-item doc-vide">${bloc}<span class="doc-ouvrir">\ud83d\udd12 Bient\u00f4t</span></div>`;
+      }).join('');
+      return `<details class="docs-dossier" style="--dossier-accent:${meta.accent}" ${i===0 ? 'open' : ''}>
+        <summary><span class="docs-chevron">\u25b6</span>${nom}<span class="docs-compte mono">${seen[nom].length}</span></summary>
+        <div class="docs-liste">${items}</div>
+      </details>`;
+    }).join('');
+  }
+  showView(`
+    <div class="eyebrow">${meta.label}</div>
+    <h1 class="page-title display">Documents</h1>
+    <p class="page-sub">Clique sur un dossier pour voir ce qu'il contient. Chaque document s'ouvre dans un nouvel onglet.</p>
+    ${corps}`);
+  setBreadcrumb([{label:'Accueil',action:'goHome()'},{label:meta.label,action:`goNiveau(${jsAttr(niveauKey)})`},{label:'Documents',action:''}]);
 }
 function goMatiere(niveauKey, matiere){
   if(matiere==='EMC'){ goEMC(); return; }
