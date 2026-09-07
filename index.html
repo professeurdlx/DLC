@@ -132,14 +132,19 @@ const RESOURCE_BUTTONS = ["Cours / Leçon", "Fiche de révision", "Vocabulaire",
 const CONTENT_MAP = {"Cours / Leçon": "Lecon", "Fiche de révision": "FicheDeRevision", "Vocabulaire": "Vocabulaire", "Ce que je dois savoir": "CeQueJeDoisSavoir", "Documents": "Documents", "Vidéos": "Videos", "Activités": "Activites", "Évaluation": "Evaluation", "Correction des activités": "Correction", "Correction progressive": "CorrectionProgressive", "Pour aller plus loin": "PourAllerPlusLoin"};
 const LEVEL_META = {"6e": {"label": "6ème", "accent": "#8B2625", "desc": "La Préhistoire, l'Orient ancien, la Grèce et Rome, les débuts du judaïsme et du christianisme."}, "5e": {"label": "5ème", "accent": "#C1622B", "desc": "Le Moyen Âge, le monde islamique, la Méditerranée médiévale et la Renaissance."}, "3e": {"label": "3ème", "accent": "#2B5D5C", "desc": "Les guerres mondiales, la guerre froide, la construction européenne et le monde actuel."}};
 const MATIERE_ORDER = ["Histoire", "Géographie", "EMC", "Méthodo", "Sites utiles", "Brevet"];
-const ONGLET_DOCS = "Documents";
+const DOCUMENTS = {
+  "6e": [],
+  "5e": [],
+  "3e": [
+    {dossier:"Brevet", titre:"Les modalit\u00e9s du brevet 2027", description:"\u00c9preuves, dur\u00e9es, bar\u00e8mes, calcul de la note et mentions.", lien:"documents/brevet-3e-2027.html"}
+  ]
+};
 const MANUEL_NUMERIQUE = {
   "6e": "https://www.editions-hatier.fr/flip/flex/97824010201461?token=1347410d07bdfb196988c181c2873db6",
   "5e": "https://www.editions-hatier.fr/flip/flex/97824010201539",
   "3e": "https://www.editions-hatier.fr/flip/flex/97824010774541?token=1347410d07bdfb196988c181c2873db6"
 };
 let ROWS = [];
-let DOCS = [];
 let currentChapterRow = null;
 let state = {niveau:null, matiere:null};
 async function fetchSheetRows(sheetId, onglet){
@@ -186,12 +191,6 @@ async function loadData(){
     window.__sheet2Failed = true;
   }
   ROWS = mergeRows(baseRows, updateRows);
-  try {
-    DOCS = await fetchSheetRows(SHEET_ID_2, ONGLET_DOCS);
-  } catch(e) {
-    console.warn(`Onglet "${ONGLET_DOCS}" absent ou illisible.`, e);
-    window.__docsAbsent = true;
-  }
 }
 function showError(){
   document.getElementById('main-content').innerHTML = `
@@ -291,37 +290,31 @@ function goNiveau(key){
   setBreadcrumb([{label:'Accueil',action:'goHome()'},{label:meta.label,action:`goNiveau('${key}')`}]);
 }
 function getDocs(niveauKey){
-  return DOCS.filter(d => String(d.Niveau || '').trim() === niveauKey);
+  return DOCUMENTS[niveauKey] || [];
 }
 function goDocuments(niveauKey){
   const meta = LEVEL_META[niveauKey] || {label:niveauKey, accent:'#8B2625'};
-  const rows = getDocs(niveauKey);
+  const docs = getDocs(niveauKey);
   const dossiers = [];
-  const seen = {};
-  rows.forEach(d => {
-    const nom = String(d.Dossier || '').trim() || 'Documents';
-    if(!seen[nom]){ seen[nom] = []; dossiers.push(nom); }
-    seen[nom].push(d);
+  const parDossier = {};
+  docs.forEach(d => {
+    const nom = (d.dossier || 'Documents').trim();
+    if(!parDossier[nom]){ parDossier[nom] = []; dossiers.push(nom); }
+    parDossier[nom].push(d);
   });
-  const num = v => { const n = parseFloat(v); return isNaN(n) ? 999 : n; };
   let corps;
-  if(rows.length === 0){
-    corps = window.__docsAbsent
-      ? `<div class="docs-empty">Les documents ne sont pas disponibles pour le moment. Reviens un peu plus tard.</div>`
-      : `<div class="docs-empty">Aucun document n'est encore publi\u00e9 pour ce niveau.</div>`;
+  if(docs.length === 0){
+    corps = `<div class="docs-empty">Aucun document n\u0027est encore publi\u00e9 pour ce niveau. Reviens bient\u00f4t.</div>`;
   } else {
     corps = dossiers.map((nom, i) => {
-      const items = seen[nom].slice().sort((a,b) => num(a.Ordre) - num(b.Ordre)).map(d => {
-        const titre = String(d.Titre || '').trim() || 'Document';
-        const desc = String(d.Description || '').trim();
-        const lien = String(d.Lien || '').trim();
-        const bloc = `<span><span class="doc-titre">${titre}</span>${desc ? `<span class="doc-desc">${desc}</span>` : ''}</span>`;
-        return lien
-          ? `<a class="doc-item" href="${lien}" target="_blank" rel="noopener noreferrer">${bloc}<span class="doc-ouvrir">Ouvrir</span></a>`
-          : `<div class="doc-item doc-vide">${bloc}<span class="doc-ouvrir">\ud83d\udd12 Bient\u00f4t</span></div>`;
+      const items = parDossier[nom].map(d => {
+        const bloc = `<span><span class="doc-titre">${d.titre}</span>${d.description ? `<span class="doc-desc">${d.description}</span>` : ''}</span>`;
+        return d.lien
+          ? `<a class="doc-item" href="${d.lien}" target="_blank" rel="noopener noreferrer">${bloc}<span class="doc-ouvrir">Ouvrir</span></a>`
+          : `<div class="doc-item doc-vide">${bloc}<span class="doc-ouvrir">Bient\u00f4t</span></div>`;
       }).join('');
-      return `<details class="docs-dossier" style="--dossier-accent:${meta.accent}" ${i===0 ? 'open' : ''}>
-        <summary><span class="docs-chevron">\u25b6</span>${nom}<span class="docs-compte mono">${seen[nom].length}</span></summary>
+      return `<details class="docs-dossier" style="--dossier-accent:${meta.accent}" ${i === 0 ? 'open' : ''}>
+        <summary><span class="docs-chevron">\u25b6</span>${nom}<span class="docs-compte mono">${parDossier[nom].length}</span></summary>
         <div class="docs-liste">${items}</div>
       </details>`;
     }).join('');
@@ -329,7 +322,7 @@ function goDocuments(niveauKey){
   showView(`
     <div class="eyebrow">${meta.label}</div>
     <h1 class="page-title display">Documents</h1>
-    <p class="page-sub">Clique sur un dossier pour voir ce qu'il contient. Chaque document s'ouvre dans un nouvel onglet.</p>
+    <p class="page-sub">Clique sur un dossier pour voir ce qu\u0027il contient. Chaque document s\u0027ouvre dans un nouvel onglet.</p>
     ${corps}`);
   setBreadcrumb([{label:'Accueil',action:'goHome()'},{label:meta.label,action:`goNiveau(${jsAttr(niveauKey)})`},{label:'Documents',action:''}]);
 }
