@@ -115,7 +115,11 @@ const RESOURCE_BUTTONS = ["Cours / Leçon", "Fiche de révision", "Vocabulaire",
 const CONTENT_MAP = {"Cours / Leçon": "Lecon", "Fiche de révision": "FicheDeRevision", "Vocabulaire": "Vocabulaire", "Ce que je dois savoir": "CeQueJeDoisSavoir", "Documents": "Documents", "Vidéos": "Videos", "Activités": "Activites", "Évaluation": "Evaluation", "Correction des activités": "Correction", "Correction progressive": "CorrectionProgressive", "Pour aller plus loin": "PourAllerPlusLoin"};
 const LEVEL_META = {"6e": {"label": "6ème", "accent": "#8B2625", "desc": "La Préhistoire, l'Orient ancien, la Grèce et Rome, les débuts du judaïsme et du christianisme."}, "5e": {"label": "5ème", "accent": "#C1622B", "desc": "Le Moyen Âge, le monde islamique, la Méditerranée médiévale et la Renaissance."}, "3e": {"label": "3ème", "accent": "#2B5D5C", "desc": "Les guerres mondiales, la guerre froide, la construction européenne et le monde actuel."}};
 const MATIERE_ORDER = ["Histoire", "Géographie", "EMC", "Méthodo", "Sites utiles", "Brevet"];
-const MANUEL_NUMERIQUE = {"5e": "https://www.editions-hatier.fr/flip/flex/97824010201539"};
+const MANUEL_NUMERIQUE = {
+  "6e": "https://www.editions-hatier.fr/flip/flex/97824010201461?token=1347410d07bdfb196988c181c2873db6",
+  "5e": "https://www.editions-hatier.fr/flip/flex/97824010201539",
+  "3e": "https://www.editions-hatier.fr/flip/flex/97824010774541?token=1347410d07bdfb196988c181c2873db6"
+};
 let ROWS = [];
 let currentChapterRow = null;
 let state = {niveau:null, matiere:null};
