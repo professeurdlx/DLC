@@ -172,7 +172,12 @@ function mergeRows(baseRows, updateRows){
   return Object.values(byKey);
 }
 async function loadData(){
-  const baseRows = await fetchSheetRows(SHEET_ID);
+  let baseRows = [];
+  try {
+    baseRows = await fetchSheetRows(SHEET_ID);
+  } catch(e) {
+    console.warn('Tableau de base inaccessible, utilisation du tableau de contenu seul.', e);
+  }
   let updateRows = [];
   try {
     updateRows = await fetchSheetRows(SHEET_ID_2);
@@ -180,6 +185,7 @@ async function loadData(){
     console.warn('Tableau de mise à jour (contenu 6e/5e/3e) inaccessible.', e);
     window.__sheet2Failed = true;
   }
+  if(!baseRows.length && !updateRows.length) throw new Error('aucun_tableau_accessible');
   ROWS = mergeRows(baseRows, updateRows);
 }
 function showError(){
